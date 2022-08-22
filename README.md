@@ -6,7 +6,7 @@
 `main.tf`
 ``` hcl
 module "vpc" {
-  source = "terraform-ncloud-modules/vpc"
+  source = "terraform-ncloud-modules/vpc/ncloud"
 
   // VPC (Required)
   name            = var.vpc.name
