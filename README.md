@@ -1,9 +1,8 @@
 # Ncloud VPC Terraform module
 
-## Usage
+## Module Usage
 
-### Module Declaration
-`main.tf`
+### `main.tf`
 #### Single VPC
 ``` hcl
 module "vpc" {
@@ -67,8 +66,9 @@ module "vpcs" {
 ```
 
 
-### Variable Declaration
+## Variable Declaration
 
+### `terraform.tfvars`
 You can create `terraform.tfvars` and refer to the sample below to write variable specifications.
 #### Single VPC
 ``` hcl
@@ -299,6 +299,8 @@ vpc = {
 
 
 ```
+
+### `variable.tf`
 You also need to create `variable.tf` to enable `terraform.tfvars`
 ``` hcl
 variable "vpc" {}
