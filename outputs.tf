@@ -26,6 +26,10 @@ output "deny_allow_groups" {
   value = ncloud_network_acl_deny_allow_group.deny_allow_groups
 }
 
+output "access_control_groups" {
+  value = ncloud_access_control_group.acgs
+}
+
 output "all_route_tables" {
   value = merge(ncloud_route_table.public_route_tables, ncloud_route_table.private_route_tables)
 }

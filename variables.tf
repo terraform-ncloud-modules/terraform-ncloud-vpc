@@ -38,6 +38,12 @@ variable "deny_allow_groups" {
   default = []
 }
 
+variable "access_control_groups" {
+  description = "(Required) See the description in the readme"
+  type        = list(any)
+  default     = []
+}
+
 variable "public_route_tables" {
   description = "See the description in the readme"
   type    = list(any)
