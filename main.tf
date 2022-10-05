@@ -64,8 +64,6 @@ resource "ncloud_network_acl_deny_allow_group" "deny_allow_groups" {
 }
 
 
-
-
 locals {
   network_acl_ids = merge(
     { for network_acl in var.network_acls : "default" => ncloud_vpc.vpc.default_network_acl_no if network_acl.name == "default" },
@@ -143,7 +141,7 @@ resource "ncloud_network_acl_rule" "nacl_rules" {
 
   depends_on = [
     ncloud_network_acl.network_acls,
-    ncloud_network_acl_deny_allow_group.deny_allow_groups,
+    # ncloud_network_acl_deny_allow_group.deny_allow_groups,
     ncloud_vpc.vpc
   ]
 }
