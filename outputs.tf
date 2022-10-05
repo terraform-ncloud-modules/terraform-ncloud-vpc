@@ -45,3 +45,4 @@ output "private_route_tables" {
 output "nat_gateways" {
   value = ncloud_nat_gateway.nat_gateways
 }
+
