@@ -3,6 +3,21 @@ resource "ncloud_vpc" "vpc" {
   ipv4_cidr_block = var.ipv4_cidr_block
 }
 
+
+resource "ncloud_subnet" "subnets" {
+  for_each = { for subnet in var.subnets : subnet.name => subnet }
+
+  name           = each.value.name
+  vpc_no         = ncloud_vpc.vpc.id
+  usage_type     = each.value.usage_type
+  subnet_type    = each.value.subnet_type
+  zone           = each.value.zone
+  subnet         = each.value.subnet
+  network_acl_no = each.value.network_acl == "default" ? ncloud_vpc.vpc.default_network_acl_no : ncloud_network_acl.network_acls[each.value.network_acl].id
+
+}
+
+// Deprecated. It has been replaced by "subnets"
 resource "ncloud_subnet" "public_subnets" {
   for_each = { for subnet in var.public_subnets : subnet.name => subnet }
 
@@ -16,6 +31,7 @@ resource "ncloud_subnet" "public_subnets" {
 
 }
 
+// Deprecated. It has been replaced by "subnets"
 resource "ncloud_subnet" "private_subnets" {
   for_each = { for subnet in var.private_subnets : subnet.name => subnet }
 
@@ -29,6 +45,7 @@ resource "ncloud_subnet" "private_subnets" {
 
 }
 
+// Deprecated. It has been replaced by "subnets"
 resource "ncloud_subnet" "loadbalancer_subnets" {
   for_each = { for subnet in var.loadbalancer_subnets : subnet.name => subnet }
 
@@ -43,7 +60,7 @@ resource "ncloud_subnet" "loadbalancer_subnets" {
 }
 
 locals {
-  subnets = merge(ncloud_subnet.public_subnets, ncloud_subnet.private_subnets, ncloud_subnet.loadbalancer_subnets)
+  subnets = merge(ncloud_subnet.subnets, ncloud_subnet.public_subnets, ncloud_subnet.private_subnets, ncloud_subnet.loadbalancer_subnets)
 }
 
 resource "ncloud_network_acl" "network_acls" {

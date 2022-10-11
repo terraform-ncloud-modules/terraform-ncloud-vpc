@@ -2,8 +2,14 @@ output "vpc" {
   value = ncloud_vpc.vpc
 }
 
+
+output "subnets" {
+  value = merge(ncloud_subnet.subnets, ncloud_subnet.public_subnets, ncloud_subnet.private_subnets, ncloud_subnet.loadbalancer_subnets)
+}
+
+// Deprecated. It has been replaced by "subnets"
 output "all_subnets" {
-  value = merge(ncloud_subnet.public_subnets, ncloud_subnet.private_subnets, ncloud_subnet.loadbalancer_subnets)
+  value = merge(ncloud_subnet.subnets, ncloud_subnet.public_subnets, ncloud_subnet.private_subnets, ncloud_subnet.loadbalancer_subnets)
 }
 
 output "public_subnets" {

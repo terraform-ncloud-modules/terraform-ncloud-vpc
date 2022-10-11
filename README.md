@@ -27,6 +27,21 @@ vpcs = [
     ipv4_cidr_block = string(cidr)  
 
     // Subnet declaration (Optional, List)
+    subnets = [      
+      {
+        name        = string
+        usage_type  = "GEN"          // GEN | LOADB
+        subnet_type = "PRIVATE"      // PUBLIC | PRIVATE 
+                                     // If usage_type is LOADB in the KR region, only PRIVATE is allowed.
+        zone        = string(zone)   // (PUB) KR-1 | KR-2 // (FIN) FKR-1 | FKR-2 // (GOV) KR | KRS
+        subnet      = string(cidr)   
+        network_acl = string         // default | NetworkAclName, 
+                                     // if set "default", then "default Network ACL" will be set. 
+      }
+    ]
+
+    // Deprecated
+    // Subnet declaration (Optional, List)
     public_subnets = [      
       {
         name        = string
@@ -140,43 +155,51 @@ vpcs = [
     name            = "vpc-foo"
     ipv4_cidr_block = "10.0.0.0/16"
 
-    public_subnets = [
+    subnets = [
       {
         name        = "sbn-foo-public-1"
+        usage_type  = "GEN"
+        subnet_type = "PUBLIC"
         zone        = "KR-1"
         subnet      = "10.0.1.0/24"
         network_acl = "default"
       },
       {
         name        = "sbn-foo-public-2"
+        usage_type  = "GEN"
+        subnet_type = "PUBLIC"
         zone        = "KR-2"
         subnet      = "10.0.2.0/24"
         network_acl = "default"
-      }
-    ]
-    private_subnets = [
+      },
       {
         name        = "sbn-foo-private-1"
+        usage_type  = "GEN"
+        subnet_type = "PRIVATE"
         zone        = "KR-1"
         subnet      = "10.0.3.0/24"
         network_acl = "default"
       },
       {
         name        = "sbn-foo-private-2"
+        usage_type  = "GEN"
+        subnet_type = "PRIVATE"
         zone        = "KR-2"
         subnet      = "10.0.4.0/24"
         network_acl = "default"
-      }
-    ]
-    loadbalancer_subnets = [
+      },
       {
         name        = "sbn-foo-lb-1"
+        usage_type  = "LOADB"
+        subnet_type = "PRIVATE"
         zone        = "KR-1"
         subnet      = "10.0.5.0/24"
         network_acl = "nacl-foo-loadbalancer"
       },
       {
         name        = "sbn-foo-lb-2"
+        usage_type  = "LOADB"
+        subnet_type = "PRIVATE"
         zone        = "KR-2"
         subnet      = "10.0.6.0/24"
         network_acl = "nacl-foo-loadbalancer"
@@ -277,22 +300,25 @@ vpcs = [
     name            = "vpc-bar"
     ipv4_cidr_block = "10.10.0.0/16"
 
-    public_subnets = [
+    subnets = [
       {
         name        = "sbn-bar-public"
+        usage_type  = "GEN"
+        subnet_type = "PUBLIC"
         zone        = "KR-1"
         subnet      = "10.10.1.0/24"
         network_acl = "default"
-      }
-    ]
-    private_subnets = [
+      },
       {
         name        = "sbn-bar-private"
+        usage_type  = "GEN"
+        subnet_type = "PRIVATE"
         zone        = "KR-1"
         subnet      = "10.10.2.0/24"
         network_acl = "default"
       }
     ]
+
 
     access_control_groups = [
       {
@@ -362,9 +388,12 @@ module "vpcs" {
   name            = each.value.name
   ipv4_cidr_block = each.value.ipv4_cidr_block
 
-  public_subnets       = lookup(each.value, "public_subnets", [])
-  private_subnets      = lookup(each.value, "private_subnets", [])
-  loadbalancer_subnets = lookup(each.value, "loadbalancer_subnets", [])
+  subnets = lookup(each.value, "subnets", [])
+
+  // Deprecated. It has been replaced by "subnets"
+  // public_subnets       = lookup(each.value, "public_subnets", [])
+  // private_subnets      = lookup(each.value, "private_subnets", [])
+  // loadbalancer_subnets = lookup(each.value, "loadbalancer_subnets", [])
 
   network_acls      = lookup(each.value, "network_acls", [])
   deny_allow_groups = lookup(each.value, "deny_allow_groups", [])
