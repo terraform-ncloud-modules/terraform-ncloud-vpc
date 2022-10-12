@@ -8,7 +8,9 @@ This document describes the Terraform module that creates multiple Ncloud VPCs.
 
 ### Structure : `variable.tf`
 
-You need to create `variable.tf` and declare the VPC variable to recognize VPC variable in `terraform.tfvars`. You can change the variable name to whatever you want.
+You need to create `variable.tf` and copy & paste the variable declaration below.
+
+**You can change the variable name to whatever you want.**
 
 ``` hcl
 variable "vpcs" {
@@ -20,30 +22,6 @@ variable "vpcs" {
       name        = string
       usage_type  = optional(string, "GEN")           // GEN (default) | LOADB
       subnet_type = string                            // PUBLIC | PRIVATE, If usage_type is LOADB in the KR region, only PRIVATE is allowed. 
-      zone        = string                            // (PUB) KR-1 | KR-2 // (FIN) FKR-1 | FKR-2 // (GOV) KR | KRS
-      subnet      = string                            // cidr block
-      network_acl = optional(string, "default")       // default (default) | NetworkAclName, If set "default", then "default Network ACL" will be set. 
-    })), [])
-
-    // Deprecated
-    public_subnets = optional(list(object({
-      name        = string
-      zone        = string                            // (PUB) KR-1 | KR-2 // (FIN) FKR-1 | FKR-2 // (GOV) KR | KRS
-      subnet      = string                            // cidr block
-      network_acl = optional(string, "default")       // default (default) | NetworkAclName, If set "default", then "default Network ACL" will be set. 
-    })), [])
-
-    // Deprecated
-    private_subnets = optional(list(object({
-      name        = string
-      zone        = string                            // (PUB) KR-1 | KR-2 // (FIN) FKR-1 | FKR-2 // (GOV) KR | KRS
-      subnet      = string                            // cidr block
-      network_acl = optional(string, "default")       // default (default) | NetworkAclName, If set "default", then "default Network ACL" will be set. 
-    })), [])
-
-    // Deprecated
-    loadbalancer_subnets = optional(list(object({
-      name        = string
       zone        = string                            // (PUB) KR-1 | KR-2 // (FIN) FKR-1 | FKR-2 // (GOV) KR | KRS
       subnet      = string                            // cidr block
       network_acl = optional(string, "default")       // default (default) | NetworkAclName, If set "default", then "default Network ACL" will be set. 
@@ -112,8 +90,10 @@ variable "vpcs" {
 
 ## Example : `terraform.tfvars`
 
-You can create `terraform.tfvars` and refer to the sample below to write variable declarations.
+You can create a `terraform.tfvars` and refer to the sample below to write the variable specification you want.
 File name can be `terraform.tfvars` or anything ending in `.auto.tfvars`
+
+**It must exactly match the variable name above.**
 
 First element creates :
 - 1 `VPC` named "foo"
@@ -352,7 +332,7 @@ vpcs = [
 
 ### `main.tf`
 
-Map your VPC variable name to a local VPC variable. VPC module are created using local VPC variables. This eliminates the need to change the variable name reference structure in the VPC module.
+Map your `VPC variable name` to a `local VPC variable`. `VPC module` are created using `local VPC variables`. This eliminates the need to change the variable name reference structure in the `VPC module`.
 
 ``` hcl
 locals {
@@ -360,7 +340,7 @@ locals {
 }
 ```
 
-Then just copy and paste the module declaration below.
+Then just copy & paste the module declaration below.
 
 ``` hcl
 module "vpcs" {
@@ -371,9 +351,6 @@ module "vpcs" {
   name                  = each.value.name
   ipv4_cidr_block       = each.value.ipv4_cidr_block
   subnets               = each.value.subnets
-  # public_subnets        = each.value.public_subnets
-  # private_subnets       = each.value.private_subnets
-  # loadbalancer_subnets  = each.value.loadbalancer_subnets
   network_acls          = each.value.network_acls
   deny_allow_groups     = each.value.deny_allow_groups
   access_control_groups = each.value.access_control_groups
