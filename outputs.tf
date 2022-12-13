@@ -25,7 +25,17 @@ output "loadbalancer_subnets" {
 }
 
 output "network_acls" {
-  value = ncloud_network_acl.network_acls
+  value = merge(ncloud_network_acl.network_acls,
+    {
+      default = {
+        id             = ncloud_vpc.vpc.default_network_acl_no
+        name           = "${ncloud_vpc.vpc.name}-default-network-acl"
+        id_default     = true
+        network_acl_no = ncloud_vpc.vpc.default_network_acl_no
+        vpc_no         = ncloud_vpc.vpc.id
+      }
+    }
+  )
 }
 
 output "deny_allow_groups" {
@@ -33,7 +43,17 @@ output "deny_allow_groups" {
 }
 
 output "access_control_groups" {
-  value = ncloud_access_control_group.acgs
+  value = merge(ncloud_access_control_group.acgs,
+    {
+      default = {
+        id                      = ncloud_vpc.vpc.default_access_control_group_no
+        name                    = "${ncloud_vpc.vpc.name}-default-acg"
+        id_default              = true
+        access_control_group_no = ncloud_vpc.vpc.default_network_acl_no
+        vpc_no                  = ncloud_vpc.vpc.id
+      }
+    }
+  )
 }
 
 output "all_route_tables" {

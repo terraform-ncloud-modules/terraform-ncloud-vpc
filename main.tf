@@ -99,7 +99,7 @@ locals {
           deny_allow_group_no = (can(regex("^([0-9]{1,3}\\.){3}[0-9]{1,3}\\/[0-9]{1,2}$", rule[2]))
             ? null : ncloud_network_acl_deny_allow_group.deny_allow_groups[rule[2]].id
           )
-          port_range  = rule[3]
+          port_range  = rule[3] != "" ? rule[3] : null
           rule_action = rule[4]
           description = rule[5]
         }
@@ -114,7 +114,7 @@ locals {
           deny_allow_group_no = (can(regex("^([0-9]{1,3}\\.){3}[0-9]{1,3}\\/[0-9]{1,2}$", rule[2]))
             ? null : ncloud_network_acl_deny_allow_group.deny_allow_groups[rule[2]].id
           )
-          port_range  = rule[3]
+          port_range  = rule[3] != "" ? rule[3] : null
           rule_action = rule[4]
           description = rule[5]
         }
@@ -189,7 +189,7 @@ locals {
           source_access_control_group_no = (can(regex("^([0-9]{1,3}\\.){3}[0-9]{1,3}\\/[0-9]{1,2}$", rule[1]))
             ? null : local.acg_ids[rule[1]]
           )
-          port_range  = rule[2]
+          port_range  = rule[2] != "" ? rule[2] : null
           description = rule[3]
         }
       ]
@@ -202,7 +202,7 @@ locals {
           source_access_control_group_no = (can(regex("^([0-9]{1,3}\\.){3}[0-9]{1,3}\\/[0-9]{1,2}$", rule[1]))
             ? null : local.acg_ids[rule[1]]
           )
-          port_range  = rule[2]
+          port_range  = rule[2] != "" ? rule[2] : null
           description = rule[3]
         }
       ]
@@ -266,21 +266,29 @@ resource "ncloud_route_table" "private_route_tables" {
 
 locals {
   public_route_tables = { for rt_key, rt_value in ncloud_route_table.public_route_tables :
-    rt_key => merge(rt_value, {
+    rt_key => {
+      route_table_no = rt_value.id
+      id             = rt_value.id
       subnets = [for subnet_name in var.public_route_tables[index(var.public_route_tables.*.name, rt_value.name)].subnet_names : {
         subnet_name = subnet_name
         subnet_no   = local.subnets[subnet_name].id
       }]
-    })
+    }
   }
+
   private_route_tables = { for rt_key, rt_value in ncloud_route_table.private_route_tables :
-    rt_key => merge(rt_value, { subnets = [for subnet_name in var.private_route_tables[index(var.private_route_tables.*.name, rt_value.name)].subnet_names : {
-      subnet_name = subnet_name
-      subnet_no   = local.subnets[subnet_name].id
+    rt_key => {
+      route_table_no = rt_value.id
+      id             = rt_value.id
+      subnets = [for subnet_name in var.private_route_tables[index(var.private_route_tables.*.name, rt_value.name)].subnet_names : {
+        subnet_name = subnet_name
+        subnet_no   = local.subnets[subnet_name].id
       }]
-    })
+    }
   }
+
   route_tables = merge(local.public_route_tables, local.private_route_tables)
+
   route_table_associations = merge([
     for rt_key, rt_value in local.route_tables : {
       for subnet in rt_value.subnets :

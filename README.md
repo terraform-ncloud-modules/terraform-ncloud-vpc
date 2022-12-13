@@ -1,137 +1,102 @@
 # Ncloud VPC Terraform module
 
+## **This version of the module requires Terraform version 1.3.0 or later.**
+
 This document describes the Terraform module that creates multiple Ncloud VPCs.
 
 ## Variable Declaration
 
-### `variable.tf`
+### Structure : `variable.tf`
 
-You need to create `variable.tf` and declare the VPC variable to recognize VPC variable in `terraform.tfvars`. You can change the variable name to whatever you want.
+You need to create `variable.tf` and copy & paste the variable declaration below.
+
+**You can change the variable name to whatever you want.**
 
 ``` hcl
-variable "vpcs" { default = [] }
+variable "vpcs" {
+  type = list(object({
+    name            = string
+    ipv4_cidr_block = string                          // cidr block
+
+    subnets = optional(list(object({
+      name        = string
+      usage_type  = optional(string, "GEN")           // GEN (default) | LOADB
+      subnet_type = string                            // PUBLIC | PRIVATE, If usage_type is LOADB in the KR region, only PRIVATE is allowed. 
+      zone        = string                            // (PUB) KR-1 | KR-2 // (FIN) FKR-1 | FKR-2 // (GOV) KR | KRS
+      subnet      = string                            // cidr block
+      network_acl = optional(string, "default")       // default (default) | NetworkAclName, If set "default", then "default Network ACL" will be set. 
+    })), [])
+
+    network_acls = optional(list(object({
+      name           = string                         // if set "default", then "default Network ACL rule" will be created
+      description    = optional(string, "")           // if name is "default", then description is ignored
+
+      // The order of writing inbound_rules & outbound_rules is as follows.
+      // [
+      //   priority(number),                                      // 1-199
+      //   protocol(string),                                      // TCP | UDP | ICMP
+      //   cidr_block(string) | deny_allow_group_name(string),      
+      //   port_number(number) | port_range(string),              // need to enter "" if protocol is ICMP
+      //   rule_action(string),                                   // ALLOW | DROP
+      //   description(string)
+      // ]
+      inbound_rules  = optional(list(list(any)), [])
+      outbound_rules = optional(list(list(any)), [])
+    })), [])
+
+    deny_allow_groups = optional(list(object({
+      name        = string
+      description = optional(string, "")
+      ip_list     = optional(list(string), [])        // IP address (not CIDR)
+    })), [])
+
+    access_control_groups = optional(list(object({
+      name           = string                         // if set "default", then "default ACG rule" will be created
+      description    = optional(string, "")           // if name is "default", then description is ignored
+
+      // The order of writing inbound_rules & outbound_rules is as follows.
+      // [
+      //   protocol(string),                                      // TCP | UDP | ICMP
+      //   cidr_block(string) | access_control_group_name(string),      
+      //   port_number(number) | port_range(string),              // need to enter "" if protocol is ICMP
+      //   description(string)
+      // ]
+      inbound_rules  = optional(list(list(any)), [])
+      outbound_rules = optional(list(list(any)), [])
+    })), [])
+
+    public_route_tables = optional(list(object({
+      name         = string                           
+      description  = optional(string, "")             
+      subnet_names = optional(list(string), [])    // All subnets not specified in the separately created route table are automatically associated to the "default route table".
+    })), [])
+
+    private_route_tables = optional(list(object({
+      name         = string                           
+      description  = optional(string, "")             
+      subnet_names = optional(list(string), [])    // All subnets not specified in the separately created route table are automatically associated to the "default route table".
+    })), [])
+
+    nat_gateways = optional(list(object({
+      name        = string
+      zone        = string                            // KR-1 | KR-2
+      route_table = optional(string, "default")       // default (default) | RouteTableName, If set "default", then "default Route Table for private Subnet" will be set.
+    })), [])
+  }))
+  default = []
+}
+
 ```
 
-### `terraform.tfvars`
+### Example : `terraform.tfvars`
 
-You can create `terraform.tfvars` and refer to the sample below to write variable declarations.
+You can create a `terraform.tfvars` and refer to the sample below to write the variable specification you want.
 File name can be `terraform.tfvars` or anything ending in `.auto.tfvars`
 
-#### Structure
-
-``` hcl
-vpcs = [
-  {
-    // VPC declaration (Requied)
-    name            = string
-    ipv4_cidr_block = string(cidr)  
-
-    // Subnet declaration (Optional, List)
-    subnets = [      
-      {
-        name        = string
-        usage_type  = "GEN"          // GEN | LOADB
-        subnet_type = "PRIVATE"      // PUBLIC | PRIVATE 
-                                     // If usage_type is LOADB in the KR region, only PRIVATE is allowed.
-        zone        = string(zone)   // (PUB) KR-1 | KR-2 // (FIN) FKR-1 | FKR-2 // (GOV) KR | KRS
-        subnet      = string(cidr)   
-        network_acl = string         // default | NetworkAclName, 
-                                     // if set "default", then "default Network ACL" will be set. 
-      }
-    ]
-
-    // Deprecated
-    // Subnet declaration (Optional, List)
-    public_subnets = [      
-      {
-        name        = string
-        zone        = string(zone)   // (PUB) KR-1 | KR-2 // (FIN) FKR-1 | FKR-2 // (GOV) KR | KRS
-        subnet      = string(cidr)   
-        network_acl = string         // default | NetworkAclName, 
-                                     // if set "default", then "default Network ACL" will be set. 
-      }
-    ]
-    private_subnets      = []    // same as above
-    loadbalancer_subnets = []    // same as above 
-
-    // Network ACL declaration (Optional, List)
-    network_acls = [
-      {
-        name        = string   // if set "default", then "default Network ACL rule" will be created
-        description = string  
-
-        // The order of writing inbound_rules & outbound_rules is as follows.
-        // [priority, protocol, ip_block|deny_allow_group, port_range, rule_action, description]
-        inbound_rules = [
-          [
-            integer,           // 1-199
-            string,            // TCP | UDP | ICMP
-            string,            // CIDR | DenyAllowGroupName
-            integer|string,    // PortNumber(22) | PortRange(1-65535)
-            string,            // ALLOW | DROP
-            string
-          ],
-        ]
-        outbound_rules = []    // same as above
-      }
-    ] 
-
-    // Deny-Allow Group declaration (Optional, List)
-    deny_allow_groups = [
-      {
-        name        = string
-        description = string
-        ip_list     = list(string)  // IP address (not CIDR)
-      }
-    ] 
-
-    // ACG declaration (Optional, List)
-    access_control_groups = [
-      {
-        name        = string   // if set "default", then "default ACG rule" will be created
-        description = string  
-
-        // The order of writing inbound_rules & outbound_rules is as follows.
-        // [protocol, ip_block|source_access_control_group, port_range, description]
-        inbound_rules = [
-          [
-            string,            // TCP | UDP | ICMP
-            string,            // CIDR | AccessControlGroupName
-                               // Set to "default" to set "default ACG" to source_access_control_group.
-            integer|string,    // PortNumber(22) | PortRange(1-65535)
-            string
-          ]
-        ]
-        outbound_rules = []    // same as above
-      }
-    ] 
-
-    // Route Table declaration (Optional, List)
-    public_route_tables = [
-      {
-        name         = string
-        description  = string
-        subnet_names = list(string)    // [ SubnetName ]. It can be empty list []. 
-      }
-    ]
-    private_route_tables = []     // same as above  
-
-    // NAT Gateway declaration (Optional, List)
-    nat_gateways = [
-      {
-        name        = string
-        zone        = string(zone)  // KR-1 | KR-2
-        route_table = string        // default | RouteTableName
-                                    // if set "default", then "default Route Table for private Subnet" will be set. 
-      }
-    ]
-  }
-]
-```
-
-#### Example
+**It must exactly match the variable name above.**
 
 First element creates :
+
 - 1 `VPC` named "foo"
 - 2 `Subnets` each for Public & Private & Load Balancer
 - 1 `Network ACL` for Load Balnacer Subnets
@@ -141,6 +106,7 @@ First element creates :
 - 1 `Route Tables` each for KR-1 & KR-2 zone 
 
 Second element creates :
+
 - 1 `VPC` named "bar"
 - 1 `Subnets` each for Public & Private
 - 1 `Access Control Group` each for Public & Private Subnets
@@ -238,7 +204,6 @@ vpcs = [
       {
         name        = "default"
         description = "Default ACG for this VPC"
-        inbound_rules = []
         outbound_rules = [
           ["TCP", "0.0.0.0/0", "1-65535", "All allow to any"],
           ["UDP", "0.0.0.0/0", "1-65535", "All allow to any"]
@@ -329,7 +294,8 @@ vpcs = [
         ]
         outbound_rules = [
           ["TCP", "0.0.0.0/0", "1-65535", "All allow to any"],
-          ["UDP", "0.0.0.0/0", "1-65535", "All allow to any"]
+          ["UDP", "0.0.0.0/0", "1-65535", "All allow to any"],
+          ["ICMP", "0.0.0.0/0", "", "All allow to any"]
         ]
       },
       {
@@ -340,7 +306,8 @@ vpcs = [
         ]
         outbound_rules = [
           ["TCP", "0.0.0.0/0", "1-65535", "All allow to any"],
-          ["UDP", "0.0.0.0/0", "1-65535", "All allow to any"]
+          ["UDP", "0.0.0.0/0", "1-65535", "All allow to any"],
+          ["ICMP", "0.0.0.0/0", "", "All allow to any"]
         ]
       }
     ]
@@ -369,7 +336,7 @@ vpcs = [
 
 ### `main.tf`
 
-Map your VPC variable name to a local VPC variable. VPC module are created using local VPC variables. This eliminates the need to change the variable name reference structure in the VPC module.
+Map your `VPC variable name` to a `local VPC variable`. `VPC module` are created using `local VPC variables`. This eliminates the need to change the variable name reference structure in the `VPC module`.
 
 ``` hcl
 locals {
@@ -377,7 +344,7 @@ locals {
 }
 ```
 
-Then just copy and paste the module declaration below.
+Then just copy & paste the module declaration below.
 
 ``` hcl
 module "vpcs" {
@@ -385,24 +352,14 @@ module "vpcs" {
 
   for_each = { for vpc in local.vpcs : vpc.name => vpc }
 
-  name            = each.value.name
-  ipv4_cidr_block = each.value.ipv4_cidr_block
-
-  subnets = lookup(each.value, "subnets", [])
-
-  // Deprecated. It has been replaced by "subnets"
-  // public_subnets       = lookup(each.value, "public_subnets", [])
-  // private_subnets      = lookup(each.value, "private_subnets", [])
-  // loadbalancer_subnets = lookup(each.value, "loadbalancer_subnets", [])
-
-  network_acls      = lookup(each.value, "network_acls", [])
-  deny_allow_groups = lookup(each.value, "deny_allow_groups", [])
-
-  access_control_groups = lookup(each.value, "access_control_groups", [])
-
-  public_route_tables  = lookup(each.value, "public_route_tables", [])
-  private_route_tables = lookup(each.value, "private_route_tables", [])
-
-  nat_gateways = lookup(each.value, "nat_gateways", [])
+  name                  = each.value.name
+  ipv4_cidr_block       = each.value.ipv4_cidr_block
+  subnets               = each.value.subnets
+  network_acls          = each.value.network_acls
+  deny_allow_groups     = each.value.deny_allow_groups
+  access_control_groups = each.value.access_control_groups
+  public_route_tables   = each.value.public_route_tables
+  private_route_tables  = each.value.private_route_tables
+  nat_gateways          = each.value.nat_gateways
 }
 ```
